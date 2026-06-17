@@ -13,17 +13,26 @@
 
 const { test, expect } = require('@playwright/test');
 
+// Site-specific knobs. To retarget at another site, change baseURL in
+// playwright.config.js and adjust these to match it.
+const HOME_HEADING = /home/i;                  // heading proving the homepage rendered
+const COOKIE_ACCEPT_LABELS = ['Accepteren', 'Accept', 'Akkoord', 'Alles accepteren'];
+const MAX_TAB_STOPS = 60;                      // how far to Tab before giving up
+
 test('homepage links should show a visible focus indicator', async ({ page }) => {
   // Arrange: open the homepage and wait for it to render.
   // baseURL is set in playwright.config.js, so '/' resolves to https://gohome.io.
   await page.goto('/', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: /home/i }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: HOME_HEADING }).first()).toBeVisible();
 
   // Dismiss a cookie banner if one appears, so it can't trap our Tab presses
   // and stop us ever reaching the real page links.
-  for (const label of ['Accepteren', 'Accept', 'Akkoord', 'Alles accepteren']) {
+  for (const label of COOKIE_ACCEPT_LABELS) {
     const btn = page.getByRole('button', { name: label });
-    if (await btn.count()) { try { await btn.first().click({ timeout: 1500 }); } catch {} break; }
+    if (await btn.count()) {
+      try { await btn.first().click({ timeout: 1500 }); } catch {}
+      break;
+    }
   }
 
   // Capture each link's UNFOCUSED style up front, before any Tab moves focus.
@@ -48,7 +57,7 @@ test('homepage links should show a visible focus indicator', async ({ page }) =>
   let linksChecked = 0;
 
   // Act: Tab through the page and check each link we land on.
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < MAX_TAB_STOPS; i++) {
     await page.keyboard.press('Tab');
 
     const link = await page.evaluate(() => {
