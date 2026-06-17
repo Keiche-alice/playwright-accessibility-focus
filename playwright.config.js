@@ -12,7 +12,7 @@ module.exports = defineConfig({
   timeout: 30 * 1000,
 
   // 'list' prints progress in the terminal; 'html' writes a self-contained
-  // report (with the on-failure screenshots and the attached axe report) to
+  // report (with the per-test screenshots and the attached axe report) to
   // playwright-report/, which CI uploads as an artifact. open: 'never' stops it
   // popping a browser open on a local run.
   reporter: [['list'], ['html', { open: 'never' }]],
@@ -22,8 +22,10 @@ module.exports = defineConfig({
     // instead of typing the full URL every time.
     baseURL: 'https://gohome.io',
 
-    // Save a screenshot automatically, but only when a test FAILS.
-    screenshot: 'only-on-failure',
+    // Always capture a screenshot so the HTML report carries visual evidence.
+    // (Note: 'only-on-failure' would capture nothing here - the tests are marked
+    // test.fail(), so an expected failure counts as a pass and never triggers it.)
+    screenshot: 'on',
   },
 
   // Run tests in Chromium (the engine behind Chrome). Kept to one browser for a

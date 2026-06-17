@@ -16,6 +16,31 @@ for the rest of the WCAG A/AA rules (see [Two tests](#two-tests-and-why) below).
 > makes this a *regression tracker*, not a permanently-red build. The screenshots
 > in [`a11y-proof/`](./a11y-proof) are the visual evidence (FOCUSED vs UNFOCUSED).
 
+## Why is the suite "green" when the site is broken?
+
+Normally a failing accessibility test means *"the code under test is wrong, go
+fix it."* Here it's the other way round: the assertion (*"every link must show a
+visible focus indicator"*) is **correct**, and `gohome.io` genuinely **violates**
+it — so run plainly, both tests would **fail**, every time, forever. That's the
+honest result, but a build that is red on day one stays red and stops telling you
+anything new.
+
+Since the broken behaviour is the **known, expected state** we're documenting
+(not a defect we introduced and can fix), we mark it as expected with
+`test.fail()`. The semantics then become a regression signal rather than a
+pass/fail verdict:
+
+- 🟢 **Green** = "still broken, exactly as expected" — the test failed, and we
+  *expected* it to. Nothing changed.
+- 🔴 **Red** = "the expectation no longer holds" — either the site was **fixed**
+  (the test unexpectedly passed → delete the `test.fail()` line) or a check
+  **regressed**. Either way, something changed and a human should look.
+
+So green here does **not** mean "the site is accessible." It means "the site is
+still inaccessible in precisely the way we recorded." The proof of *what* is
+broken lives in the run's attachments — the per-test screenshots and the axe
+test's `axe-violations.json`.
+
 ## How it works
 
 1. Open the homepage (`baseURL` is set in `playwright.config.js`).
@@ -47,8 +72,8 @@ npm test                 # runs both tests; or target one: npx playwright test f
 npx playwright show-report   # open the HTML report (screenshots + axe results)
 ```
 
-The HTML report (written to `playwright-report/`) bundles the on-failure
-screenshots and the attached axe report. CI runs the same `npm test` on every
+The HTML report (written to `playwright-report/`) bundles a screenshot per test
+and the attached axe report. CI runs the same `npm test` on every
 push/PR via [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) and uploads
 that report as an artifact.
 
