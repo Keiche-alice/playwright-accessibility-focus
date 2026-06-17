@@ -1,0 +1,56 @@
+name: Accessibility tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  playwright:
+    name: Playwright (Chromium)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # npm ci installs exactly what the lockfile pins - fails if it drifts.
+      - name: Install dependencies
+        run: npm ci
+
+      # Cache the ~120MB browser binaries, keyed on the lockfile (which pins the
+      # Playwright version), so they're only downloaded when that version changes.
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      # Only Chromium is needed (see playwright.config.js). On a cache miss do the
+      # full install; on a hit the binaries are restored, so just (re)install the
+      # OS libraries they link against - that part isn't cached on the runner.
+      - name: Install Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Chromium system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Run accessibility tests
+        run: npm test
+
+      # Always upload the HTML report (even on failure) so results are inspectable
+      # from the run summary - including the expected-failure screenshots and the
+      # attached axe report.
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
